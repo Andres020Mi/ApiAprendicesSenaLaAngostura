@@ -22,8 +22,10 @@ class ApprenticeController extends Controller
             ], 404);
         }
 
-        $senaLogoUrl = asset('storage/sena-logo.png');
-        $photoUrl = asset('storage/' . $apprentice->photo_path);
+        // URL base del dominio sin /public para imágenes
+        $baseUrl = 'https://apiaprendizes.tiny-purchases.com';
+        $senaLogoUrl = $baseUrl . '/storage/app/public/sena-logo.png'; // Ruta directa al logo
+        $photoUrl = $baseUrl . '/storage/app/public/' . $apprentice->photo_path; // Ruta directa a la foto
 
         $data = [
             'message' => 'Información del aprendiz encontrada',
@@ -38,7 +40,7 @@ class ApprenticeController extends Controller
                 'end_date' => $apprentice->end_date,
                 'program_name' => $apprentice->program_name,
                 'program_code' => $apprentice->program_code,
-                'blood_type' => $apprentice->blood_type, // Nuevo campo
+                'blood_type' => $apprentice->blood_type,
             ]
         ];
 
@@ -54,12 +56,12 @@ class ApprenticeController extends Controller
             'document_number' => 'required|string|unique:apprentices,document_number',
             'full_name' => 'required|string|max:255',
             'training_center' => 'required|string|max:255',
-            'photo' => 'required|image|max:2048', // Foto como archivo
+            'photo' => 'required|image|max:2048',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'program_name' => 'required|string|max:255',
             'program_code' => 'required|string|max:50',
-            'blood_type' => 'nullable|string|in:A+,A-,B+,B-,AB+,AB-,O+,O-', // Tipos válidos
+            'blood_type' => 'nullable|string|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
         ]);
 
         if ($validator->fails()) {
@@ -70,7 +72,7 @@ class ApprenticeController extends Controller
             ], 400);
         }
 
-        // Guardar la foto en storage
+        // Guardar la foto en storage/app/public/apprentices
         $photoPath = $request->file('photo')->store('apprentices', 'public');
 
         // Crear el aprendiz
@@ -86,15 +88,19 @@ class ApprenticeController extends Controller
             'blood_type' => $request->blood_type,
         ]);
 
+        // Generar la URL de la foto para la respuesta
+        $baseUrl = 'https://apiaprendizes.tiny-purchases.com';
+        $photoUrl = $baseUrl . '/storage/app/public/' . $photoPath;
+
         return response()->json([
             'message' => 'Aprendiz creado con éxito',
             'status' => 201,
-            'data' => $apprentice,
+            'data' => array_merge($apprentice->toArray(), ['photo_url' => $photoUrl]),
         ], 201);
     }
 
     /**
-     * Subir foto (opcional, ya lo teníamos)
+     * Subir foto
      */
     public function uploadPhoto(Request $request, $documentNumber)
     {
@@ -112,9 +118,13 @@ class ApprenticeController extends Controller
         $apprentice->photo_path = $path;
         $apprentice->save();
 
+        // Generar la URL de la foto para la respuesta
+        $baseUrl = 'https://apiaprendizes.tiny-purchases.com';
+        $photoUrl = $baseUrl . '/storage/app/public/' . $path;
+
         return response()->json([
             'message' => 'Foto subida con éxito',
-            'photo_url' => asset('storage/' . $path),
+            'photo_url' => $photoUrl,
         ], 200);
     }
 }
